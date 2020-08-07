@@ -377,7 +377,7 @@ class BeamModulePlugin implements Plugin<Project> {
     // Example usage:
     // configuration {
     //   compile library.java.avro
-    //   testCompile library.java.junit
+    //   testImplementation library.java.junit
     // }
 
     // These versions are defined here because they represent
@@ -386,7 +386,7 @@ class BeamModulePlugin implements Plugin<Project> {
     def aws_java_sdk_version = "1.11.718"
     def aws_java_sdk2_version = "2.13.54"
     def cassandra_driver_version = "3.8.0"
-    def checkerframework_version = "3.5.0"
+    def checkerframework_version = "3.6.0"
     def classgraph_version = "4.8.65"
     def gax_version = "1.54.0"
     def generated_grpc_ga_version = "1.85.1"
@@ -415,7 +415,7 @@ class BeamModulePlugin implements Plugin<Project> {
     def protobuf_version = "3.11.1"
     def quickcheck_version = "0.8"
     def spark_version = "2.4.6"
-    def spotbugs_version = "4.0.6"
+    def spotbugs_version = "4.1.1"
     def testcontainers_localstack_version = "1.14.3"
 
     // A map of maps containing common libraries used per language. To use:
@@ -662,7 +662,7 @@ class BeamModulePlugin implements Plugin<Project> {
     //                  otherwise the generated Maven pom will be missing this dependency.
     //  * shadow      - Required during compilation or runtime of the main source set.
     //                  Will become a runtime dependency of the generated Maven pom.
-    //  * testCompile - Required during compilation or runtime of the test source set.
+    //  * testImplementation - Required during compilation or runtime of the test source set.
     //                  This must be shaded away in the shaded test jar.
     //  * shadowTest  - Required during compilation or runtime of the test source set.
     //                  TODO: Figure out whether this should be a test scope dependency
@@ -831,7 +831,7 @@ class BeamModulePlugin implements Plugin<Project> {
 
       project.dependencies {
         compileOnlyAnnotationDeps.each { dep ->
-          compileOnly dep
+          implementation dep
           testCompileOnly dep
           annotationProcessor dep
           testAnnotationProcessor dep
@@ -885,7 +885,7 @@ class BeamModulePlugin implements Plugin<Project> {
       project.apply plugin: "net.ltgt.apt-eclipse"
 
       // Enables a plugin which can apply code formatting to source.
-      project.apply plugin: "com.diffplug.gradle.spotless"
+      project.apply plugin: "com.diffplug.spotless"
       // scan CVE
       project.apply plugin: "net.ossindex.audit"
       project.audit { rateLimitAsError = false }
@@ -972,12 +972,12 @@ class BeamModulePlugin implements Plugin<Project> {
         // Create a new configuration 'shadowTest' like 'shadow' for the test scope
         project.configurations {
           shadow { description = "Dependencies for shaded source set 'main'" }
-          compile.extendsFrom shadow
+          implementation.extendsFrom shadow
           shadowTest {
             description = "Dependencies for shaded source set 'test'"
             extendsFrom shadow
           }
-          testCompile.extendsFrom shadowTest
+          testImplementation.extendsFrom shadowTest
         }
       }
 
@@ -1013,7 +1013,7 @@ class BeamModulePlugin implements Plugin<Project> {
           classifier = "tests"
           from project.sourceSets.test.output
           configurations = [
-            project.configurations.testRuntime
+            project.configurations.testRuntimeOnly
           ]
           zip64 true
           exclude "META-INF/INDEX.LIST"
@@ -1075,7 +1075,7 @@ class BeamModulePlugin implements Plugin<Project> {
           exclude "META-INF/*.DSA"
           exclude "META-INF/*.RSA"
         })
-        project.artifacts.testRuntime project.testJar
+        project.artifacts.testRuntimeOnly project.testJar
       }
 
       project.ext.includeInJavaBom = configuration.publish
@@ -1411,22 +1411,22 @@ class BeamModulePlugin implements Plugin<Project> {
         /* include dependencies required by runners */
         //if (runner?.contains('dataflow')) {
         if (runner?.equalsIgnoreCase('dataflow')) {
-          testRuntime it.project(path: ":runners:google-cloud-dataflow-java", configuration: 'testRuntime')
-          testRuntime it.project(path: ":runners:google-cloud-dataflow-java:worker:legacy-worker", configuration: 'shadow')
+          testRuntimeOnly it.project(path: ":runners:google-cloud-dataflow-java", configuration: 'testRuntime')
+          testRuntimeOnly it.project(path: ":runners:google-cloud-dataflow-java:worker:legacy-worker", configuration: 'shadow')
         }
 
         if (runner?.equalsIgnoreCase('direct')) {
-          testRuntime it.project(path: ":runners:direct-java", configuration: 'shadowTest')
+          testRuntimeOnly it.project(path: ":runners:direct-java", configuration: 'shadowTest')
         }
 
         if (runner?.equalsIgnoreCase('flink')) {
-          testRuntime it.project(path: ":runners:flink:1.10", configuration: 'testRuntime')
+          testRuntimeOnly it.project(path: ":runners:flink:1.10", configuration: 'testRuntime')
         }
 
         if (runner?.equalsIgnoreCase('spark')) {
-          testRuntime it.project(path: ":runners:spark", configuration: 'testRuntime')
-          testRuntime project.library.java.spark_core
-          testRuntime project.library.java.spark_streaming
+          testRuntimeOnly it.project(path: ":runners:spark", configuration: 'testRuntime')
+          testRuntimeOnly project.library.java.spark_core
+          testRuntimeOnly project.library.java.spark_streaming
 
           // Testing the Spark runner causes a StackOverflowError if slf4j-jdk14 is on the classpath
           project.configurations.testRuntimeClasspath {
@@ -1436,13 +1436,13 @@ class BeamModulePlugin implements Plugin<Project> {
 
         /* include dependencies required by filesystems */
         if (filesystem?.equalsIgnoreCase('hdfs')) {
-          testRuntime it.project(path: ":sdks:java:io:hadoop-file-system", configuration: 'testRuntime')
-          testRuntime project.library.java.hadoop_client
+          testRuntimeOnly it.project(path: ":sdks:java:io:hadoop-file-system", configuration: 'testRuntime')
+          testRuntimeOnly project.library.java.hadoop_client
         }
 
         /* include dependencies required by AWS S3 */
         if (filesystem?.equalsIgnoreCase('s3')) {
-          testRuntime it.project(path: ":sdks:java:io:amazon-web-services", configuration: 'testRuntime')
+          testRuntimeOnly it.project(path: ":sdks:java:io:amazon-web-services", configuration: 'testRuntime')
         }
       }
       project.task('packageIntegrationTests', type: Jar)
@@ -1502,7 +1502,7 @@ class BeamModulePlugin implements Plugin<Project> {
     project.ext.applyGroovyNature = {
       project.apply plugin: "groovy"
 
-      project.apply plugin: "com.diffplug.gradle.spotless"
+      project.apply plugin: "com.diffplug.spotless"
       def disableSpotlessCheck = project.hasProperty('disableSpotlessCheck') &&
           project.disableSpotlessCheck == 'true'
       project.spotless {
